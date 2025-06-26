@@ -2,29 +2,38 @@ package main
 
 import (
 	"github.com/julienschmidt/httprouter"
-	"log"
 	"net"
 	"net/http"
 	"restapi-lesson/internal/user"
+	"restapi-lesson/pkg/logging"
 	"time"
 )
 
 func main() {
-	log.Println("create router")
+	logger := logging.GetLogger()
+	logger.Info("create router")
 	router := httprouter.New()
 
-	log.Println("register user handler")
-	handler := user.NewHandler()
+	logger.Info("register user handler")
+	handler := user.NewHandler(logger)
 	handler.Register(router)
 
 	start(router)
 }
 
 func start(router *httprouter.Router) {
-	log.Println("start application")
-	var listener, err = net.Listen("tcp", ":1234")
-	if err != nil {
-		panic(err)
+	logger := logging.GetLogger()
+	logger.Info("start application")
+
+	var listener net.Listener
+	var listenErr error
+
+	logger.Info("listen tcp")
+	listener, listenErr = net.Listen("tcp", ":1234")
+	logger.Infof("server is listening port %s:%s", "tcp", ":1234")
+
+	if listenErr != nil {
+		logger.Fatal(listenErr)
 	}
 
 	server := &http.Server{
@@ -33,5 +42,5 @@ func start(router *httprouter.Router) {
 		ReadTimeout:  15 * time.Second,
 	}
 
-	log.Fatalln(server.Serve(listener))
+	logger.Fatal(server.Serve(listener))
 }
