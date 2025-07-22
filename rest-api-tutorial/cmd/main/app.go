@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"github.com/julienschmidt/httprouter"
 	"net"
@@ -8,8 +9,10 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	author2 "restapi-lesson/internal/author"
+	author "restapi-lesson/internal/author/db"
 	"restapi-lesson/internal/config"
-	"restapi-lesson/internal/user"
+	"restapi-lesson/pkg/client/postgresql"
 	"restapi-lesson/pkg/logging"
 	"time"
 )
@@ -21,9 +24,22 @@ func main() {
 
 	cfg := config.GetConfig()
 
-	logger.Info("register user handler")
-	handler := user.NewHandler(logger)
-	handler.Register(router)
+	postgreSQLClient, err := postgresql.NewClient(context.TODO(), 3, cfg.Storage)
+	if err != nil {
+		logger.Fatalf("%v", err)
+	}
+	repository := author.NewRepository(postgreSQLClient, logger)
+	a := author2.Author{
+		Name: "OK",
+	}
+	err = repository.Create(context.TODO(), &a)
+	if err != nil {
+		logger.Fatal(err)
+	}
+
+	logger.Info("register author handler")
+	authorHandler := author2.NewHandler(repository, logger)
+	authorHandler.Register(router)
 
 	start(router, cfg)
 }
